@@ -26,10 +26,12 @@
 Ciclo de vida obligatorio y secuencial:
 $$\text{Producto} \longrightarrow \text{Requisitos} \longrightarrow \text{Diseño (Arquitectura + Módulos)} \longrightarrow \text{Backlog} \longrightarrow \text{Ticket} \longrightarrow \text{IA (Desarrollo)} \longrightarrow \text{Pruebas} \longrightarrow \text{Revisión} \longrightarrow \text{Git (Gitea + GitHub con Explicación)} \longrightarrow \text{Siguiente Ticket}$$
 
-### 💎 Reglas Obligatorias de Calidad de Código y Redacción:
-1. **🚫 Cero Código Repetitivo (Principio DRY Estricto):** Modularización profunda, reutilización de contratos/traits/servicios y eliminación total de lógica duplicada.
-2. **✍️ Comunicación y Textos Humanizados:** Las explicaciones de cada paso, commits, documentación técnica y mensajes del sistema deben ser naturales, profesionales, técnicos y claros, evitando redacciones robóticas o clichés genéricos de IA.
-3. **✅ Validación Obligatoria por Ticket:** Ningún ticket se da por cerrado sin cumplir simultáneamente: Cero duplicación + Pruebas Pest 100% + PHPStan Nivel 8 + Pint PSR-12 + Explicación humanizada en Git.
+### 💎 Reglas de Oro de Ingeniería de Software (Obligatorias):
+1. **🚫 Cero Código Repetitivo y Cero Duplicación (DRY Estricto):** Métodos concisos, altamente reutilizables y modulares. Prohibido duplicar lógica o crear funciones redundantes. Pocas líneas de código claras y directas.
+2. **🧹 Cero Código Muerto:** No se permiten clases, métodos, variables o imports no utilizados o residuales.
+3. **🇪🇸 Dominio y Documentación en Español:** Comentarios, excepciones, interfaces y documentación explicativa en español profesional y técnico.
+4. **✍️ Redacción 100% Humana y Natural:** Las explicaciones de cada paso, commits, mensajes de error y documentación deben leerse como redactadas por un ingeniero de software senior real, eliminando cualquier frase robótica o plantilla genérica de IA.
+5. **✅ Pipeline de Validación Estricta por Ticket:** Todo ticket debe pasar de forma obligatoria por: Cero duplicación + Pruebas Pest 100% + PHPStan Nivel 8 + Pint PSR-12 + Explicación clara en Git (Gitea principal / GitHub espejo).
 
 ---
 
