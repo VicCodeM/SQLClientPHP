@@ -1,0 +1,14 @@
+includes:
+    - vendor/larastan/larastan/extension.neon
+
+parameters:
+    paths:
+        - app/
+        - bootstrap/app.php
+        - config/
+        - routes/
+
+    # Strict Level 8
+    level: 8
+
+    ignoreErrors: []
