@@ -75,7 +75,7 @@ $$\text{Producto} \longrightarrow \text{Requisitos} \longrightarrow \text{Diseñ
 | :--- | :--- | :---: |
 | **#01** | Inicialización del proyecto Laravel 13, herramientas de calidad (Pest, PHPStan Lvl 8, Pint) y configuración de remotos Git (Gitea principal / GitHub espejo). | **Completado** |
 | **#02** | Migraciones y modelos del DER interno (Users, Roles, Workspaces, Connections, SSH Tunnels, History, Audit) con UUIDs y pruebas de integración. | **Completado** |
-| **#03** | Bóveda de conexiones seguras y servicio de cifrado Envelope AES-256-GCM. | Pendiente |
+| **#03** | Bóveda de conexiones seguras y servicio de cifrado Envelope AES-256-GCM con derivación HKDF y DTOs inmutables. | **Completado** |
 | **#04** | Contrato `DatabaseDriverContract` e Implementación completa del Driver PostgreSQL. | Pendiente |
 | **#05** | Implementación de Drivers secundarios (MySQL, SQLite y SQLCipher Community Edition con soporte para bases cifradas). | Pendiente |
 | **#06** | Motor de Ejecución de Consultas con Paginación de Cursores y Streaming SSE. | Pendiente |
@@ -121,3 +121,17 @@ $$\text{Producto} \longrightarrow \text{Requisitos} \longrightarrow \text{Diseñ
   - `composer analyse` (PHPStan Lvl 8): 0 errores.
   - `composer test` (Pest): 6 tests pasados con 18 aserciones.
 - **Commit Asociado:** `feat(core): implement internal database migrations and Eloquent models with UUIDs and RBAC`
+
+### 🔹 Ticket #03: Bóveda de Cifrado Envelope AES-256-GCM y Capa de DTOs Seguros
+- **Fecha:** 2026-08-26
+- **Acciones Realizadas:**
+  1. Creación de la interfaz `EncryptedVaultContract` y la implementación `EncryptedVaultService` con algoritmo autenticado **AES-256-GCM** y derivación de clave con **HKDF (SHA-256)**.
+  2. Jerarquía de excepciones de seguridad (`VaultException`, `EncryptionException`, `DecryptionException`) con detección de paquetes manipulados o firmas MAC inválidas.
+  3. Creación de DTOs inmutables de solo lectura (`ConnectionConfigDTO`, `SshTunnelDTO`) para el paso tipado y seguro de configuraciones de bases de datos remotas y túneles SSH.
+  4. Registro y vinculación del servicio en `AppServiceProvider` como Singleton de la aplicación.
+  5. Suite de pruebas en Pest (`tests/Feature/EncryptedVaultServiceTest.php`) validando cifrado, descifrado, verificación AAD contra manipulación, detección de integridad y resolución de DTOs.
+- **Resultados de Calidad:**
+  - `composer format` (Pint): 100% aprobado.
+  - `composer analyse` (PHPStan Lvl 8): 0 errores.
+  - `composer test` (Pest): 10 tests pasados con 36 aserciones.
+- **Commit Asociado:** `feat(vault): implement AES-256-GCM authenticated vault service and typed ConnectionConfigDTOs`

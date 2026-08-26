@@ -7,6 +7,28 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
+/**
+ * @property string $id
+ * @property string $workspace_id
+ * @property string|null $group_id
+ * @property string|null $ssh_tunnel_id
+ * @property string $name
+ * @property string $driver
+ * @property string|null $host
+ * @property int|null $port
+ * @property string $database_name
+ * @property string|null $username
+ * @property string|null $encrypted_password
+ * @property array<string, mixed>|null $ssl_options
+ * @property bool $is_read_only
+ * @property bool $use_ssh_tunnel
+ * @property string $environment
+ * @property string|null $color_tag
+ * @property array<string, mixed>|null $options
+ * @property SshTunnel|null $sshTunnel
+ * @property ConnectionGroup|null $group
+ * @property Workspace $workspace
+ */
 class Connection extends Model
 {
     use HasUuids;
