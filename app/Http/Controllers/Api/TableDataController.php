@@ -12,7 +12,6 @@ use App\Services\Database\DatabaseDriverManager;
 use App\Services\Vault\Contracts\EncryptedVaultContract;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use PDOException;
 
 class TableDataController extends Controller
 {
@@ -183,10 +182,12 @@ class TableDataController extends Controller
                 'success' => true,
                 'message' => "Registro actualizado ({$result->affectedRows} fila afectada).",
             ]);
-        } catch (PDOException $e) {
+        } catch (\Throwable $e) {
+            $cleanMsg = mb_convert_encoding($e->getMessage(), 'UTF-8', 'UTF-8, Windows-1252, ISO-8859-1');
+
             return response()->json([
                 'success' => false,
-                'message' => 'Error al actualizar el registro: '.$e->getMessage(),
+                'message' => 'Error al actualizar el registro: '.$cleanMsg,
             ], 422);
         } finally {
             $driver->disconnect();
@@ -257,10 +258,12 @@ class TableDataController extends Controller
                 'success' => true,
                 'message' => 'Fila creada exitosamente.',
             ]);
-        } catch (PDOException $e) {
+        } catch (\Throwable $e) {
+            $cleanMsg = mb_convert_encoding($e->getMessage(), 'UTF-8', 'UTF-8, Windows-1252, ISO-8859-1');
+
             return response()->json([
                 'success' => false,
-                'message' => 'Error al insertar fila: '.$e->getMessage(),
+                'message' => 'Error al insertar fila: '.$cleanMsg,
             ], 422);
         } finally {
             $driver->disconnect();
@@ -329,10 +332,12 @@ class TableDataController extends Controller
                 'success' => true,
                 'message' => "Registro eliminado ({$result->affectedRows} fila afectada).",
             ]);
-        } catch (PDOException $e) {
+        } catch (\Throwable $e) {
+            $cleanMsg = mb_convert_encoding($e->getMessage(), 'UTF-8', 'UTF-8, Windows-1252, ISO-8859-1');
+
             return response()->json([
                 'success' => false,
-                'message' => 'Error al eliminar fila: '.$e->getMessage(),
+                'message' => 'Error al eliminar fila: '.$cleanMsg,
             ], 422);
         } finally {
             $driver->disconnect();

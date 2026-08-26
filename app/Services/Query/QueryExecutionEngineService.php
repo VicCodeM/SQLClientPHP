@@ -118,6 +118,7 @@ class QueryExecutionEngineService implements QueryExecutionEngineContract
             return $result;
         } catch (Throwable $e) {
             $durationMs = (int) round((microtime(true) - $startTime) * 1000);
+            $cleanErrorMessage = mb_convert_encoding($e->getMessage(), 'UTF-8', 'UTF-8, Windows-1252, ISO-8859-1');
 
             QueryHistory::create([
                 'workspace_id' => $connection->workspace_id,
@@ -129,11 +130,11 @@ class QueryExecutionEngineService implements QueryExecutionEngineContract
                 'duration_ms' => $durationMs,
                 'affected_rows' => 0,
                 'status' => 'error',
-                'error_message' => $e->getMessage(),
+                'error_message' => $cleanErrorMessage,
                 'executed_at' => now(),
             ]);
 
-            throw new QueryExecutionException("Error en la ejecución de la consulta: {$e->getMessage()}", 0, $e);
+            throw new QueryExecutionException("Error en la ejecución de la consulta: {$cleanErrorMessage}", 0, $e);
         } finally {
             $driver->disconnect();
         }

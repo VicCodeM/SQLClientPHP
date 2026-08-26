@@ -8,7 +8,6 @@ use App\Services\Database\DatabaseDriverManager;
 use App\Services\Vault\Contracts\EncryptedVaultContract;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use PDOException;
 
 class SchemaExplorerController extends Controller
 {
@@ -98,10 +97,12 @@ class SchemaExplorerController extends Controller
                     'schemas' => $tree,
                 ],
             ]);
-        } catch (PDOException $e) {
+        } catch (\Throwable $e) {
+            $msg = mb_convert_encoding($e->getMessage(), 'UTF-8', 'UTF-8, Windows-1252, ISO-8859-1');
+
             return response()->json([
                 'success' => false,
-                'message' => 'Error al explorar base de datos: '.$e->getMessage(),
+                'message' => 'Error al explorar base de datos: '.$msg,
             ], 422);
         } finally {
             $driver->disconnect();
@@ -128,10 +129,12 @@ class SchemaExplorerController extends Controller
                     'ddl' => $ddl,
                 ],
             ]);
-        } catch (PDOException $e) {
+        } catch (\Throwable $e) {
+            $msg = mb_convert_encoding($e->getMessage(), 'UTF-8', 'UTF-8, Windows-1252, ISO-8859-1');
+
             return response()->json([
                 'success' => false,
-                'message' => $e->getMessage(),
+                'message' => $msg,
             ], 422);
         } finally {
             $driver->disconnect();

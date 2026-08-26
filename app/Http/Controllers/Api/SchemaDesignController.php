@@ -12,7 +12,6 @@ use App\Services\Database\DatabaseDriverManager;
 use App\Services\Vault\Contracts\EncryptedVaultContract;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use PDOException;
 
 class SchemaDesignController extends Controller
 {
@@ -233,10 +232,12 @@ class SchemaDesignController extends Controller
                     'ddl' => $ddl,
                 ],
             ]);
-        } catch (PDOException $e) {
+        } catch (\Throwable $e) {
+            $cleanMsg = mb_convert_encoding($e->getMessage(), 'UTF-8', 'UTF-8, Windows-1252, ISO-8859-1');
+
             return response()->json([
                 'success' => false,
-                'message' => 'Error al crear tabla: '.$e->getMessage(),
+                'message' => 'Error al crear tabla: '.$cleanMsg,
                 'data' => [
                     'ddl' => $ddl,
                 ],

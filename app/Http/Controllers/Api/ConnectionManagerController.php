@@ -12,7 +12,6 @@ use App\Services\Database\DatabaseDriverManager;
 use App\Services\Vault\Contracts\EncryptedVaultContract;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use PDOException;
 
 class ConnectionManagerController extends Controller
 {
@@ -137,10 +136,13 @@ class ConnectionManagerController extends Controller
                 'message' => "¡Conexión exitosa! Latencia: {$latencyMs} ms.",
                 'latency_ms' => $latencyMs,
             ]);
-        } catch (PDOException $e) {
+        } catch (\Throwable $e) {
+            $rawMsg = $e->getMessage();
+            $cleanMsg = mb_convert_encoding($rawMsg, 'UTF-8', 'UTF-8, Windows-1252, ISO-8859-1');
+
             return response()->json([
                 'success' => false,
-                'message' => 'Fallo al conectar: '.$e->getMessage(),
+                'message' => 'Fallo al conectar: '.$cleanMsg,
             ], 422);
         } finally {
             $driver->disconnect();
