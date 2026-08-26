@@ -9,6 +9,7 @@ import VisualQueryBuilder from '@/Components/Builder/VisualQueryBuilder.vue';
 import QueryHistoryDrawer from '@/Components/History/QueryHistoryDrawer.vue';
 import SavedQueriesModal from '@/Components/Snippets/SavedQueriesModal.vue';
 import AuditLogModal from '@/Components/Audit/AuditLogModal.vue';
+import AiAssistantDrawer from '@/Components/Ai/AiAssistantDrawer.vue';
 import type { Connection, QueryTab } from '@/types';
 import {
     Play,
@@ -28,7 +29,8 @@ import {
     Sliders,
     PenTool,
     History,
-    Bookmark
+    Bookmark,
+    Sparkles
 } from 'lucide-vue-next';
 
 const props = defineProps<{
@@ -67,6 +69,7 @@ const activeTab = computed(() =>
 const showHistory = ref(false);
 const showSnippets = ref(false);
 const showAudit = ref(false);
+const showAiAssistant = ref(false);
 
 const toastMessage = ref<string | null>(null);
 
@@ -211,6 +214,15 @@ async function executeCurrentQuery() {
     }
 }
 
+function insertSqlFromAi(sql: string) {
+    if (activeTab.value && activeTab.value.type === 'sql') {
+        activeTab.value.queryText = sql;
+        showToast('Consulta insertada desde el Copiloto IA ✨');
+    } else {
+        createNewTab(sql);
+    }
+}
+
 function copyToClipboard(text: string, label: string) {
     navigator.clipboard.writeText(text);
     showToast(`¡Copiado como ${label}! 📋`);
@@ -314,6 +326,17 @@ function copyAsInsert() {
                 <button @click="openQueryBuilderTab" class="flex items-center gap-1 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold px-2.5 py-1.5 rounded transition">
                     <Sliders class="w-3.5 h-3.5 text-emerald-400" />
                     <span>Query Builder</span>
+                </button>
+
+                <div class="h-4 w-px bg-slate-800 mx-1" />
+
+                <!-- AI Copilot Button -->
+                <button
+                    @click="showAiAssistant = true"
+                    class="flex items-center gap-1.5 bg-indigo-600/90 hover:bg-indigo-500 text-white text-xs font-semibold px-3 py-1.5 rounded transition shadow-sm border border-indigo-500/50"
+                >
+                    <Sparkles class="w-3.5 h-3.5 text-indigo-200" />
+                    <span>Copiloto IA</span>
                 </button>
 
                 <div class="h-4 w-px bg-slate-800 mx-1" />
@@ -527,6 +550,15 @@ function copyAsInsert() {
         </div>
 
         <!-- Modals & Drawers -->
+        <AiAssistantDrawer
+            :show="showAiAssistant"
+            :connection-id="selectedConnectionId"
+            :current-sql="activeTab?.queryText"
+            @close="showAiAssistant = false"
+            @insert-sql="insertSqlFromAi"
+            @notify="showToast"
+        />
+
         <QueryHistoryDrawer
             :show="showHistory"
             :connection-id="selectedConnectionId"

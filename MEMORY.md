@@ -85,7 +85,7 @@ $$\text{Producto} \longrightarrow \text{Requisitos} \longrightarrow \text{Diseñ
 | **#08** | Data Grid Interactivo con Edición Inline de registros, inserción modal, borrado seguro y concurrencia por clave primaria. | **Completado** |
 | **#09** | Diseñador Visual de Tablas (DDL en tiempo real), Diagramas ERD y **Visual Query Builder** interactivo. | **Completado** |
 | **#10** | Historial de Consultas con re-ejecución, Snippets de Código con tags y Registro de Auditoría de Seguridad. | **Completado** |
-| **#11** | Asistente IA con Groq Cloud: Descubrimiento dinámico de modelos (`/models`), recomendación automática, Text-to-SQL, Copilot y optimización. | Pendiente |
+| **#11** | Asistente IA Dinámico con Groq Cloud: Descubrimiento dinámico (`/models`), Text-to-SQL con contexto de esquema, optimización y copiloto chat. | **Completado** |
 
 ---
 
@@ -241,3 +241,20 @@ $$\text{Producto} \longrightarrow \text{Requisitos} \longrightarrow \text{Diseñ
   - `composer test` (Pest): 32 tests pasados con 167 aserciones.
   - `npm run build`: Compilación exitosa en 0 errores.
 - **Commit Asociado:** `feat(history): implement query history drawer, saved query snippets and security audit log viewer`
+
+### 🔹 Ticket #11: Asistente IA Dinámico con Groq Cloud (Descubrimiento `/models`, Text-to-SQL y Copilot)
+- **Fecha:** 2026-08-26
+- **Acciones Realizadas:**
+  1. Integración con la API de ultra baja latencia de **Groq Cloud** (`console.groq.com`).
+  2. Implementación de descubrimiento dinámico de modelos de IA vía `GET /openai/v1/models` en `GroqAiService` con recomendación automática del mejor modelo para SQL (`llama-3.3-70b-versatile`, `deepseek-r1-distill-llama-70b`, etc.).
+  3. Módulo **Text-to-SQL** asistido por contexto de esquema (tablas y columnas) para generación precisa de consultas dialecto-específicas.
+  4. Módulo de **Análisis de Rendimiento y Optimización** con sugerencias de índices y reescritura de consultas lentas.
+  5. Módulo de **Corrección Automática de Errores** ante fallos de sintaxis o ejecución.
+  6. Panel flotante reactivo `AiAssistantDrawer.vue` con chat conversacional e inserción directa al editor Monaco.
+  7. Controlador API `AiAssistantController.php` y suite de pruebas en Pest (`tests/Feature/AiAssistantControllerTest.php`).
+- **Resultados de Calidad:**
+  - `composer format` (Pint): 100% aprobado.
+  - `composer analyse` (PHPStan Lvl 8): 0 errores.
+  - `composer test` (Pest): 36 tests pasados con 198 aserciones.
+  - `npm run build`: Compilación exitosa en 0 errores.
+- **Commit Asociado:** `feat(ai): implement Groq Cloud dynamic model discovery, Text-to-SQL, query optimizer and AI assistant drawer`

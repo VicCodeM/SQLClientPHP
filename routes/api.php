@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\AiAssistantController;
 use App\Http\Controllers\Api\AuditLogController;
 use App\Http\Controllers\Api\QueryExecutionController;
 use App\Http\Controllers\Api\QueryHistoryController;
@@ -48,4 +49,11 @@ Route::prefix('v1')->group(function (): void {
 
     // Audit Logs
     Route::get('audit-logs', [AuditLogController::class, 'index'])->name('api.audit.index');
+
+    // AI Assistant (Groq Cloud)
+    Route::get('ai/models', [AiAssistantController::class, 'models'])->name('api.ai.models');
+    Route::post('ai/text-to-sql/{connection?}', [AiAssistantController::class, 'textToSql'])->name('api.ai.text-to-sql');
+    Route::post('ai/optimize/{connection?}', [AiAssistantController::class, 'optimize'])->name('api.ai.optimize');
+    Route::post('ai/fix/{connection?}', [AiAssistantController::class, 'fix'])->name('api.ai.fix');
+    Route::post('ai/chat', [AiAssistantController::class, 'chat'])->name('api.ai.chat');
 });

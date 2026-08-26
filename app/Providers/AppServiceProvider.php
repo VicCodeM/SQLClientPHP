@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Services\Ai\Contracts\GroqAiContract;
+use App\Services\Ai\GroqAiService;
 use App\Services\Database\DatabaseDriverManager;
 use App\Services\Query\Contracts\QueryExecutionEngineContract;
 use App\Services\Query\QueryExecutionEngineService;
@@ -19,6 +21,7 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(EncryptedVaultContract::class, EncryptedVaultService::class);
         $this->app->singleton(DatabaseDriverManager::class, fn () => new DatabaseDriverManager);
         $this->app->singleton(QueryExecutionEngineContract::class, QueryExecutionEngineService::class);
+        $this->app->singleton(GroqAiContract::class, GroqAiService::class);
     }
 
     /**
