@@ -4,7 +4,10 @@ namespace App\Services\Database;
 
 use App\DTOs\ConnectionConfigDTO;
 use App\Services\Database\Contracts\DatabaseDriverContract;
+use App\Services\Database\Drivers\MySQLDriver;
 use App\Services\Database\Drivers\PostgresDriver;
+use App\Services\Database\Drivers\SQLCipherDriver;
+use App\Services\Database\Drivers\SQLiteDriver;
 use Closure;
 use InvalidArgumentException;
 
@@ -29,11 +32,7 @@ class DatabaseDriverManager
             return $driver;
         }
 
-        $driver = match ($driverName) {
-            'pgsql', 'postgres', 'postgresql' => new PostgresDriver,
-            default => throw new InvalidArgumentException("El motor de base de datos '{$config->driver}' no está soportado o registrado."),
-        };
-
+        $driver = $this->make($driverName);
         $driver->connect($config);
 
         return $driver;
@@ -52,6 +51,9 @@ class DatabaseDriverManager
 
         return match ($normalized) {
             'pgsql', 'postgres', 'postgresql' => new PostgresDriver,
+            'mysql', 'mariadb' => new MySQLDriver,
+            'sqlite' => new SQLiteDriver,
+            'sqlcipher' => new SQLCipherDriver,
             default => throw new InvalidArgumentException("El motor de base de datos '{$driverName}' no está soportado o registrado."),
         };
     }
