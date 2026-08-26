@@ -6,6 +6,9 @@ import InteractiveDataGrid from '@/Components/Grid/InteractiveDataGrid.vue';
 import TableDesigner from '@/Components/Designer/TableDesigner.vue';
 import ErdDiagramView from '@/Components/ERD/ErdDiagramView.vue';
 import VisualQueryBuilder from '@/Components/Builder/VisualQueryBuilder.vue';
+import QueryHistoryDrawer from '@/Components/History/QueryHistoryDrawer.vue';
+import SavedQueriesModal from '@/Components/Snippets/SavedQueriesModal.vue';
+import AuditLogModal from '@/Components/Audit/AuditLogModal.vue';
 import type { Connection, QueryTab } from '@/types';
 import {
     Play,
@@ -23,7 +26,9 @@ import {
     RefreshCw,
     Network,
     Sliders,
-    PenTool
+    PenTool,
+    History,
+    Bookmark
 } from 'lucide-vue-next';
 
 const props = defineProps<{
@@ -57,6 +62,11 @@ const activeTabId = ref<string>('tab-1');
 const activeTab = computed(() =>
     tabs.value.find((t) => t.id === activeTabId.value)
 );
+
+// Modals and Drawer state
+const showHistory = ref(false);
+const showSnippets = ref(false);
+const showAudit = ref(false);
 
 const toastMessage = ref<string | null>(null);
 
@@ -308,6 +318,19 @@ function copyAsInsert() {
 
                 <div class="h-4 w-px bg-slate-800 mx-1" />
 
+                <!-- History, Snippets and Audit buttons -->
+                <button @click="showHistory = true" title="Ver Historial de Consultas" class="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded transition text-xs flex items-center gap-1">
+                    <History class="w-4 h-4 text-blue-400" />
+                </button>
+                <button @click="showSnippets = true" title="Ver Snippets Guardados" class="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded transition text-xs flex items-center gap-1">
+                    <Bookmark class="w-4 h-4 text-amber-400" />
+                </button>
+                <button @click="showAudit = true" title="Ver Auditoría de Seguridad" class="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded transition text-xs flex items-center gap-1">
+                    <Shield class="w-4 h-4 text-purple-400" />
+                </button>
+
+                <div class="h-4 w-px bg-slate-800 mx-1" />
+
                 <button v-if="activeTab?.type === 'sql'" @click="executeCurrentQuery" :disabled="activeTab?.isExecuting" class="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-xs font-semibold px-3 py-1.5 rounded transition shadow-sm">
                     <Play v-if="!activeTab?.isExecuting" class="w-3.5 h-3.5 fill-current" />
                     <RefreshCw v-else class="w-3.5 h-3.5 animate-spin" />
@@ -502,5 +525,29 @@ function copyAsInsert() {
                 </template>
             </main>
         </div>
+
+        <!-- Modals & Drawers -->
+        <QueryHistoryDrawer
+            :show="showHistory"
+            :connection-id="selectedConnectionId"
+            @close="showHistory = false"
+            @use-query="(sql) => createNewTab(sql)"
+            @notify="showToast"
+        />
+
+        <SavedQueriesModal
+            :show="showSnippets"
+            :current-sql="activeTab?.queryText"
+            :connection-id="selectedConnectionId"
+            @close="showSnippets = false"
+            @use-snippet="(sql) => createNewTab(sql)"
+            @notify="showToast"
+        />
+
+        <AuditLogModal
+            :show="showAudit"
+            :connection-id="selectedConnectionId"
+            @close="showAudit = false"
+        />
     </div>
 </template>
