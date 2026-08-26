@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import { Head } from '@inertiajs/vue3';
 import MonacoSqlEditor from '@/Components/Editor/MonacoSqlEditor.vue';
 import InteractiveDataGrid from '@/Components/Grid/InteractiveDataGrid.vue';
@@ -10,6 +10,7 @@ import QueryHistoryDrawer from '@/Components/History/QueryHistoryDrawer.vue';
 import SavedQueriesModal from '@/Components/Snippets/SavedQueriesModal.vue';
 import AuditLogModal from '@/Components/Audit/AuditLogModal.vue';
 import AiAssistantDrawer from '@/Components/Ai/AiAssistantDrawer.vue';
+import NewConnectionModal from '@/Components/Connections/NewConnectionModal.vue';
 import type { Connection, QueryTab } from '@/types';
 import {
     Play,
@@ -30,7 +31,13 @@ import {
     PenTool,
     History,
     Bookmark,
-    Sparkles
+    Sparkles,
+    ChevronDown,
+    ChevronRight,
+    Key,
+    Eye,
+    Zap,
+    AlertCircle
 } from 'lucide-vue-next';
 
 const props = defineProps<{
@@ -38,13 +45,62 @@ const props = defineProps<{
     activeConnectionId?: string;
 }>();
 
+const connectionList = ref<Connection[]>([...props.connections]);
 const selectedConnectionId = ref<string>(
     props.activeConnectionId || props.connections[0]?.id || ''
 );
 
 const activeConnection = computed(() =>
-    props.connections.find((c) => c.id === selectedConnectionId.value)
+    connectionList.value.find((c) => c.id === selectedConnectionId.value)
 );
+
+// Real Introspected Schema Tree
+interface TableNode {
+    name: string;
+    schema: string;
+    estimated_rows: number;
+    columns: Array<{ name: string; full_type: string; is_primary: boolean; is_nullable: boolean }>;
+    isExpanded?: boolean;
+}
+
+interface SchemaNode {
+    schema: string;
+    tables: TableNode[];
+    views: Array<{ name: string; schema: string; is_materialized: boolean }>;
+    functions: Array<{ name: string; schema: string; return_type: string }>;
+    triggers: Array<{ name: string; table_name: string; timing: string; event: string }>;
+    isExpanded?: boolean;
+}
+
+const schemaTree = ref<SchemaNode[]>([]);
+const isTreeLoading = ref(false);
+
+async function loadSchemaTree() {
+    if (!selectedConnectionId.value) return;
+
+    isTreeLoading.value = true;
+    try {
+        const response = await fetch(`/api/v1/connections/${selectedConnectionId.value}/schema/tree`);
+        const data = await response.json();
+        if (response.ok && data.success) {
+            schemaTree.value = data.data.schemas.map((s: any, idx: number) => ({
+                ...s,
+                isExpanded: true,
+                tables: s.tables.map((t: any) => ({ ...t, isExpanded: false })),
+            }));
+        } else {
+            showToast(`Error al explorar esquema: ${data.message}`);
+        }
+    } catch (e: any) {
+        showToast(`Error de red: ${e.message}`);
+    } finally {
+        isTreeLoading.value = false;
+    }
+}
+
+watch(selectedConnectionId, () => {
+    loadSchemaTree();
+});
 
 const tabs = ref<QueryTab[]>([
     {
@@ -53,7 +109,7 @@ const tabs = ref<QueryTab[]>([
         type: 'sql',
         connectionId: selectedConnectionId.value,
         databaseName: activeConnection.value?.database_name || 'main',
-        queryText: 'SELECT 1 AS id, \'Bienvenido a SQLClient Web\' AS message, NOW() AS timestamp;',
+        queryText: "SELECT p.name, c.name AS categoria, p.price, p.stock\nFROM products p\nJOIN categories c ON c.id = p.category_id\nORDER BY p.price DESC;",
         isExecuting: false,
         isDirty: false,
     },
@@ -65,11 +121,12 @@ const activeTab = computed(() =>
     tabs.value.find((t) => t.id === activeTabId.value)
 );
 
-// Modals and Drawer state
+// Modals and Drawers
 const showHistory = ref(false);
 const showSnippets = ref(false);
 const showAudit = ref(false);
 const showAiAssistant = ref(false);
+const showNewConnection = ref(false);
 
 const toastMessage = ref<string | null>(null);
 
@@ -77,10 +134,16 @@ function showToast(msg: string) {
     toastMessage.value = msg;
     setTimeout(() => {
         toastMessage.value = null;
-    }, 2500);
+    }, 3000);
 }
 
-function createNewTab(sql = 'SELECT * FROM users LIMIT 50;') {
+function handleConnectionCreated(conn: Connection) {
+    connectionList.value.push(conn);
+    selectedConnectionId.value = conn.id;
+    showToast(`Conectado a ${conn.name}`);
+}
+
+function createNewTab(sql = 'SELECT * FROM products LIMIT 50;') {
     const newId = `tab-${Date.now()}`;
     tabs.value.push({
         id: newId,
@@ -118,6 +181,16 @@ function openTableDataTab(tableName: string) {
         isDirty: false,
     });
     activeTabId.value = newId;
+}
+
+function insertSelectTable(tableName: string) {
+    const sql = `SELECT * FROM "${tableName}" LIMIT 50;`;
+    if (activeTab.value && activeTab.value.type === 'sql') {
+        activeTab.value.queryText = sql;
+        executeCurrentQuery();
+    } else {
+        createNewTab(sql);
+    }
 }
 
 function openErdTab() {
@@ -264,16 +337,20 @@ function copyAsInsert() {
 
     copyToClipboard(insertStatements.join('\n'), 'INSERTs');
 }
+
+onMounted(() => {
+    loadSchemaTree();
+});
 </script>
 
 <template>
     <Head title="SQL Studio" />
 
-    <div class="flex flex-col h-screen w-screen bg-slate-950 text-slate-200 overflow-hidden">
+    <div class="flex flex-col h-screen w-screen bg-slate-950 text-slate-200 overflow-hidden font-mono select-none">
         <!-- Toast Notification -->
         <transition enter-active-class="transform ease-out duration-300 transition" enter-from-class="translate-y-2 opacity-0 sm:translate-y-0 sm:translate-x-2" enter-to-class="translate-y-0 opacity-100 sm:translate-x-0" leave-active-class="transition ease-in duration-200" leave-from-class="opacity-100" leave-to-class="opacity-0">
-            <div v-if="toastMessage" class="fixed bottom-5 right-5 z-50 flex items-center gap-2 bg-blue-600 text-white px-4 py-2.5 rounded-lg shadow-xl border border-blue-500 font-medium text-sm">
-                <Check class="w-4 h-4" />
+            <div v-if="toastMessage" class="fixed bottom-5 right-5 z-50 flex items-center gap-2 bg-blue-600 text-white px-4 py-2.5 rounded-lg shadow-2xl border border-blue-500 font-medium text-xs">
+                <Check class="w-4 h-4 shrink-0" />
                 <span>{{ toastMessage }}</span>
             </div>
         </transition>
@@ -288,13 +365,22 @@ function copyAsInsert() {
 
                 <div class="h-4 w-px bg-slate-800" />
 
-                <!-- Connection Selector -->
+                <!-- Connection Selector & New Button -->
                 <div class="flex items-center gap-2">
-                    <select v-model="selectedConnectionId" class="bg-slate-950 border border-slate-800 text-xs text-slate-200 rounded px-2.5 py-1 focus:ring-1 focus:ring-blue-500 outline-none">
-                        <option v-for="c in connections" :key="c.id" :value="c.id">
-                            {{ c.driver.toUpperCase() }}: {{ c.name }} ({{ c.database_name }})
+                    <select v-model="selectedConnectionId" class="bg-slate-950 border border-slate-800 text-xs text-slate-200 rounded px-2.5 py-1 focus:ring-1 focus:ring-blue-500 outline-none max-w-xs truncate">
+                        <option v-for="c in connectionList" :key="c.id" :value="c.id">
+                            {{ c.driver.toUpperCase() }}: {{ c.name }}
                         </option>
                     </select>
+
+                    <button
+                        @click="showNewConnection = true"
+                        class="flex items-center gap-1 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs px-2 py-1 rounded transition"
+                        title="Crear Nueva Conexión a Base de Datos"
+                    >
+                        <Plus class="w-3.5 h-3.5 text-emerald-400" />
+                        <span>Nueva</span>
+                    </button>
 
                     <!-- Environment Badge -->
                     <span v-if="activeConnection" :class="[
@@ -376,54 +462,76 @@ function copyAsInsert() {
 
         <!-- Main Studio Body -->
         <div class="flex flex-1 overflow-hidden">
-            <!-- Sidebar: Segregated Object Explorer -->
+            <!-- Sidebar: Real Introspected Database Explorer -->
             <aside class="w-64 bg-slate-900/90 border-r border-slate-800 flex flex-col shrink-0">
                 <div class="p-2.5 border-b border-slate-800 text-xs font-semibold text-slate-400 uppercase tracking-wider flex items-center justify-between">
-                    <span>Explorador de Motores</span>
-                    <Layers class="w-4 h-4" />
+                    <div class="flex items-center gap-1.5">
+                        <Layers class="w-4 h-4 text-blue-400" />
+                        <span>Explorador en Vivo</span>
+                    </div>
+                    <button @click="loadSchemaTree" :disabled="isTreeLoading" class="text-slate-400 hover:text-white p-0.5">
+                        <RefreshCw :class="['w-3.5 h-3.5', isTreeLoading ? 'animate-spin text-blue-400' : '']" />
+                    </button>
                 </div>
 
-                <div class="flex-1 overflow-y-auto p-2 space-y-3 font-mono text-xs">
-                    <!-- Section PostgreSQL -->
-                    <div class="space-y-1">
-                        <div class="flex items-center gap-1.5 text-blue-400 font-semibold px-2 py-1 bg-slate-800/50 rounded">
-                            <span>🐘 PostgreSQL</span>
-                        </div>
-                        <div class="pl-4 space-y-1 text-slate-400">
-                            <div class="flex items-center gap-1 hover:text-slate-200 cursor-pointer"><Database class="w-3.5 h-3.5 text-blue-400" /> production_db</div>
-                            <div @dblclick="openTableDataTab('users')" class="flex items-center gap-1 hover:text-slate-200 cursor-pointer pl-3"><Table class="w-3 h-3 text-slate-500" /> users</div>
-                            <div @dblclick="openTableDataTab('orders')" class="flex items-center gap-1 hover:text-slate-200 cursor-pointer pl-3"><Table class="w-3 h-3 text-slate-500" /> orders</div>
-                        </div>
+                <!-- Tree Content -->
+                <div class="flex-1 overflow-y-auto p-2 space-y-2 font-mono text-xs">
+                    <div v-if="schemaTree.length === 0 && !isTreeLoading" class="text-slate-500 text-center py-6 text-[11px]">
+                        No se encontraron esquemas en esta conexión.
                     </div>
 
-                    <!-- Section MySQL -->
-                    <div class="space-y-1">
-                        <div class="flex items-center gap-1.5 text-amber-400 font-semibold px-2 py-1 bg-slate-800/50 rounded">
-                            <span>🐬 MySQL / MariaDB</span>
+                    <div v-for="schemaNode in schemaTree" :key="schemaNode.schema" class="space-y-1">
+                        <!-- Schema Header -->
+                        <div
+                            @click="schemaNode.isExpanded = !schemaNode.isExpanded"
+                            class="flex items-center justify-between px-2 py-1 bg-slate-800/60 rounded text-slate-300 font-semibold cursor-pointer hover:bg-slate-800"
+                        >
+                            <div class="flex items-center gap-1.5">
+                                <ChevronDown v-if="schemaNode.isExpanded" class="w-3.5 h-3.5 text-slate-400" />
+                                <ChevronRight v-else class="w-3.5 h-3.5 text-slate-400" />
+                                <Database class="w-3.5 h-3.5 text-blue-400" />
+                                <span>{{ schemaNode.schema }}</span>
+                            </div>
+                            <span class="text-[10px] text-slate-500">({{ schemaNode.tables.length }})</span>
                         </div>
-                        <div class="pl-4 space-y-1 text-slate-400">
-                            <div class="flex items-center gap-1 hover:text-slate-200 cursor-pointer"><Database class="w-3.5 h-3.5 text-amber-400" /> shop_ecommerce</div>
-                            <div @dblclick="openTableDataTab('products')" class="flex items-center gap-1 hover:text-slate-200 cursor-pointer pl-3"><Table class="w-3 h-3 text-slate-500" /> products</div>
-                        </div>
-                    </div>
 
-                    <!-- Section SQLCipher -->
-                    <div class="space-y-1">
-                        <div class="flex items-center gap-1.5 text-purple-400 font-semibold px-2 py-1 bg-slate-800/50 rounded">
-                            <span>🔒 SQLCipher Vault</span>
-                        </div>
-                        <div class="pl-4 space-y-1 text-slate-400">
-                            <div class="flex items-center gap-1 hover:text-slate-200 cursor-pointer"><Database class="w-3.5 h-3.5 text-purple-400" /> encrypted_vault.db</div>
-                        </div>
-                    </div>
+                        <!-- Tables Group -->
+                        <div v-if="schemaNode.isExpanded" class="pl-3 space-y-1">
+                            <div v-for="tbl in schemaNode.tables" :key="tbl.name" class="space-y-0.5">
+                                <!-- Table item -->
+                                <div
+                                    @dblclick="openTableDataTab(tbl.name)"
+                                    @click="insertSelectTable(tbl.name)"
+                                    class="group flex items-center justify-between px-2 py-1 rounded hover:bg-slate-800/80 cursor-pointer text-slate-300 hover:text-white transition"
+                                >
+                                    <div class="flex items-center gap-1.5 truncate">
+                                        <button @click.stop="tbl.isExpanded = !tbl.isExpanded" class="text-slate-500 hover:text-slate-300">
+                                            <ChevronDown v-if="tbl.isExpanded" class="w-3 h-3" />
+                                            <ChevronRight v-else class="w-3 h-3" />
+                                        </button>
+                                        <Table class="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                                        <span class="truncate">{{ tbl.name }}</span>
+                                    </div>
+                                    <span class="text-[9px] text-slate-500 group-hover:text-slate-400">~{{ tbl.estimated_rows }}</span>
+                                </div>
 
-                    <!-- Section SQLite -->
-                    <div class="space-y-1">
-                        <div class="flex items-center gap-1.5 text-emerald-400 font-semibold px-2 py-1 bg-slate-800/50 rounded">
-                            <span>🪶 SQLite</span>
-                        </div>
-                        <div class="pl-4 space-y-1 text-slate-400">
-                            <div class="flex items-center gap-1 hover:text-slate-200 cursor-pointer"><Database class="w-3.5 h-3.5 text-emerald-400" /> local_app.sqlite</div>
+                                <!-- Nested Columns -->
+                                <div v-if="tbl.isExpanded" class="pl-6 space-y-0.5 text-[11px] text-slate-400">
+                                    <div v-for="col in tbl.columns" :key="col.name" class="flex items-center justify-between py-0.5 pr-2">
+                                        <div class="flex items-center gap-1 truncate">
+                                            <Key v-if="col.is_primary" class="w-2.5 h-2.5 text-amber-400 shrink-0" />
+                                            <span :class="col.is_primary ? 'text-amber-300 font-semibold' : 'text-slate-400'">{{ col.name }}</span>
+                                        </div>
+                                        <span class="text-[9px] text-slate-500">{{ col.full_type }}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Views Group -->
+                            <div v-for="view in schemaNode.views" :key="view.name" @click="insertSelectTable(view.name)" class="flex items-center gap-1.5 px-2 py-1 rounded hover:bg-slate-800/60 cursor-pointer text-purple-300 text-[11px]">
+                                <Eye class="w-3.5 h-3.5 text-purple-400" />
+                                <span>{{ view.name }}</span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -474,7 +582,7 @@ function copyAsInsert() {
                         :connection-id="selectedConnectionId"
                         :read-only="activeConnection?.is_read_only"
                         @notify="showToast"
-                        @created="(tbl) => { openTableDataTab(tbl); }"
+                        @created="(tbl) => { loadSchemaTree(); openTableDataTab(tbl); }"
                     />
                 </div>
 
@@ -482,6 +590,7 @@ function copyAsInsert() {
                 <div v-else-if="activeTab?.type === 'query_builder'" class="flex-1 overflow-hidden">
                     <VisualQueryBuilder
                         :connection-id="selectedConnectionId"
+                        :available-tables="schemaTree[0]?.tables?.map((t) => t.name) || ['products', 'categories', 'customers', 'orders']"
                         @notify="showToast"
                         @open-in-editor="(sql) => createNewTab(sql)"
                     />
@@ -550,6 +659,13 @@ function copyAsInsert() {
         </div>
 
         <!-- Modals & Drawers -->
+        <NewConnectionModal
+            :show="showNewConnection"
+            @close="showNewConnection = false"
+            @created="handleConnectionCreated"
+            @notify="showToast"
+        />
+
         <AiAssistantDrawer
             :show="showAiAssistant"
             :connection-id="selectedConnectionId"
