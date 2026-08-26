@@ -61,7 +61,7 @@ class SavedQueryController extends Controller
             'description' => ['nullable', 'string', 'max:500'],
             'query_text' => ['required', 'string'],
             'tags' => ['nullable', 'array'],
-            'is_public' => ['nullable', 'boolean'],
+            'is_shared' => ['nullable', 'boolean'],
         ]);
 
         /** @var User $user */
@@ -75,7 +75,7 @@ class SavedQueryController extends Controller
             'description' => $validated['description'] ?? null,
             'query_text' => $validated['query_text'],
             'tags' => $validated['tags'] ?? [],
-            'is_public' => $validated['is_public'] ?? false,
+            'is_shared' => $validated['is_shared'] ?? false,
         ]);
 
         return response()->json([
@@ -95,7 +95,7 @@ class SavedQueryController extends Controller
             'description' => ['nullable', 'string', 'max:500'],
             'query_text' => ['sometimes', 'required', 'string'],
             'tags' => ['nullable', 'array'],
-            'is_public' => ['nullable', 'boolean'],
+            'is_shared' => ['nullable', 'boolean'],
         ]);
 
         $savedQuery->update($validated);
