@@ -2,6 +2,7 @@
 import { ref, computed } from 'vue';
 import { Head } from '@inertiajs/vue3';
 import MonacoSqlEditor from '@/Components/Editor/MonacoSqlEditor.vue';
+import InteractiveDataGrid from '@/Components/Grid/InteractiveDataGrid.vue';
 import type { Connection, QueryTab, QueryResult } from '@/types';
 import {
     Play,
@@ -77,6 +78,31 @@ function createNewTab() {
     activeTabId.value = newId;
 }
 
+function openTableDataTab(tableName: string) {
+    const existingTab = tabs.value.find(
+        (t) => t.type === 'table_data' && t.tableName === tableName && t.connectionId === selectedConnectionId.value
+    );
+
+    if (existingTab) {
+        activeTabId.value = existingTab.id;
+        return;
+    }
+
+    const newId = `table-data-${tableName}-${Date.now()}`;
+    tabs.value.push({
+        id: newId,
+        title: `${tableName} (Datos)`,
+        type: 'table_data',
+        connectionId: selectedConnectionId.value,
+        databaseName: activeConnection.value?.database_name || 'main',
+        tableName: tableName,
+        queryText: '',
+        isExecuting: false,
+        isDirty: false,
+    });
+    activeTabId.value = newId;
+}
+
 function closeTab(id: string) {
     if (tabs.value.length === 1) return;
     const idx = tabs.value.findIndex((t) => t.id === id);
@@ -87,7 +113,7 @@ function closeTab(id: string) {
 }
 
 async function executeCurrentQuery() {
-    if (!activeTab.value || !activeConnection.value) return;
+    if (!activeTab.value || !activeConnection.value || activeTab.value.type !== 'sql') return;
 
     activeTab.value.isExecuting = true;
 
@@ -211,7 +237,7 @@ function copyAsInsert() {
 
             <!-- Toolbar Actions -->
             <div class="flex items-center gap-1.5">
-                <button @click="executeCurrentQuery" :disabled="activeTab?.isExecuting" class="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-xs font-semibold px-3 py-1.5 rounded transition shadow-sm">
+                <button v-if="activeTab?.type === 'sql'" @click="executeCurrentQuery" :disabled="activeTab?.isExecuting" class="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-xs font-semibold px-3 py-1.5 rounded transition shadow-sm">
                     <Play v-if="!activeTab?.isExecuting" class="w-3.5 h-3.5 fill-current" />
                     <RefreshCw v-else class="w-3.5 h-3.5 animate-spin" />
                     <span>Ejecutar (F5)</span>
@@ -248,8 +274,8 @@ function copyAsInsert() {
                         </div>
                         <div class="pl-4 space-y-1 text-slate-400">
                             <div class="flex items-center gap-1 hover:text-slate-200 cursor-pointer"><Database class="w-3.5 h-3.5 text-blue-400" /> production_db</div>
-                            <div class="flex items-center gap-1 hover:text-slate-200 cursor-pointer pl-3"><Table class="w-3 h-3 text-slate-500" /> users</div>
-                            <div class="flex items-center gap-1 hover:text-slate-200 cursor-pointer pl-3"><Table class="w-3 h-3 text-slate-500" /> orders</div>
+                            <div @dblclick="openTableDataTab('users')" class="flex items-center gap-1 hover:text-slate-200 cursor-pointer pl-3"><Table class="w-3 h-3 text-slate-500" /> users</div>
+                            <div @dblclick="openTableDataTab('orders')" class="flex items-center gap-1 hover:text-slate-200 cursor-pointer pl-3"><Table class="w-3 h-3 text-slate-500" /> orders</div>
                         </div>
                     </div>
 
@@ -260,7 +286,7 @@ function copyAsInsert() {
                         </div>
                         <div class="pl-4 space-y-1 text-slate-400">
                             <div class="flex items-center gap-1 hover:text-slate-200 cursor-pointer"><Database class="w-3.5 h-3.5 text-amber-400" /> shop_ecommerce</div>
-                            <div class="flex items-center gap-1 hover:text-slate-200 cursor-pointer pl-3"><Table class="w-3 h-3 text-slate-500" /> products</div>
+                            <div @dblclick="openTableDataTab('products')" class="flex items-center gap-1 hover:text-slate-200 cursor-pointer pl-3"><Table class="w-3 h-3 text-slate-500" /> products</div>
                         </div>
                     </div>
 
@@ -286,7 +312,7 @@ function copyAsInsert() {
                 </div>
             </aside>
 
-            <!-- Center Panel: Tabs + Editor + Results Grid -->
+            <!-- Center Panel: Tabs + Editor/Grid -->
             <main class="flex-1 flex flex-col overflow-hidden bg-slate-950">
                 <!-- Tab Header Bar -->
                 <div class="h-9 bg-slate-900/70 border-b border-slate-800 flex items-center px-1 gap-1 overflow-x-auto">
@@ -301,7 +327,8 @@ function copyAsInsert() {
                                 : 'bg-slate-900/40 text-slate-400 border-transparent hover:text-slate-200 hover:bg-slate-800/50'
                         ]"
                     >
-                        <Terminal class="w-3.5 h-3.5" />
+                        <Terminal v-if="t.type === 'sql'" class="w-3.5 h-3.5" />
+                        <Table v-else class="w-3.5 h-3.5 text-emerald-400" />
                         <span>{{ t.title }}</span>
                         <button @click.stop="closeTab(t.id)" class="hover:text-red-400 p-0.5 rounded">
                             <X class="w-3 h-3" />
@@ -313,53 +340,65 @@ function copyAsInsert() {
                     </button>
                 </div>
 
-                <!-- Monaco SQL Editor Component -->
-                <div class="h-1/2 min-h-[200px]">
-                    <MonacoSqlEditor
-                        v-if="activeTab"
-                        v-model="activeTab.queryText"
+                <!-- Tab Body: Table Data Grid Mode -->
+                <div v-if="activeTab?.type === 'table_data' && activeTab.tableName" class="flex-1 overflow-hidden">
+                    <InteractiveDataGrid
+                        :connection-id="selectedConnectionId"
+                        :table="activeTab.tableName"
                         :read-only="activeConnection?.is_read_only"
-                        @execute="executeCurrentQuery"
+                        @notify="showToast"
                     />
                 </div>
 
-                <!-- Bottom Results Grid -->
-                <div class="flex-1 flex flex-col bg-slate-950 overflow-hidden border-t border-slate-800">
-                    <!-- Status summary bar -->
-                    <div class="h-7 bg-slate-900/60 border-b border-slate-800/80 px-3 flex items-center justify-between text-[11px] text-slate-400 font-mono">
-                        <div class="flex items-center gap-3">
-                            <span v-if="activeTab?.result">
-                                Filas: <strong class="text-blue-400">{{ activeTab.result.affected_rows }}</strong> | Latencia: <strong class="text-emerald-400">{{ activeTab.result.duration_ms }} ms</strong>
-                            </span>
-                            <span v-else>Listo para ejecutar consulta.</span>
-                        </div>
+                <!-- Tab Body: SQL Editor Mode -->
+                <template v-else-if="activeTab?.type === 'sql'">
+                    <!-- Monaco SQL Editor Component -->
+                    <div class="h-1/2 min-h-[200px]">
+                        <MonacoSqlEditor
+                            v-model="activeTab.queryText"
+                            :read-only="activeConnection?.is_read_only"
+                            @execute="executeCurrentQuery"
+                        />
                     </div>
 
-                    <!-- Interactive Data Grid -->
-                    <div class="flex-1 overflow-auto font-mono text-xs">
-                        <table v-if="activeTab?.result?.rows?.length" class="w-full text-left border-collapse">
-                            <thead class="bg-slate-900 sticky top-0 border-b border-slate-800 text-slate-300">
-                                <tr>
-                                    <th class="p-2 border-r border-slate-800/60 text-slate-500 w-12 text-center">#</th>
-                                    <th v-for="col in activeTab.result.columns" :key="col" class="p-2 border-r border-slate-800/60 font-semibold">
-                                        {{ col }}
-                                    </th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr v-for="(row, rIdx) in activeTab.result.rows" :key="rIdx" class="border-b border-slate-900/80 hover:bg-slate-900/50 transition">
-                                    <td class="p-2 border-r border-slate-800/40 text-slate-500 text-center select-none bg-slate-950/40">{{ rIdx + 1 }}</td>
-                                    <td v-for="col in activeTab.result.columns" :key="col" class="p-2 border-r border-slate-800/40 text-slate-200 max-w-xs truncate">
-                                        {{ row[col] === null ? '<NULL>' : row[col] }}
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                        <div v-else class="h-full flex items-center justify-center text-slate-500 text-xs">
-                            No hay resultados para mostrar. Presiona F5 o 'Ejecutar'.
+                    <!-- Bottom Results Grid -->
+                    <div class="flex-1 flex flex-col bg-slate-950 overflow-hidden border-t border-slate-800">
+                        <!-- Status summary bar -->
+                        <div class="h-7 bg-slate-900/60 border-b border-slate-800/80 px-3 flex items-center justify-between text-[11px] text-slate-400 font-mono">
+                            <div class="flex items-center gap-3">
+                                <span v-if="activeTab?.result">
+                                    Filas: <strong class="text-blue-400">{{ activeTab.result.affected_rows }}</strong> | Latencia: <strong class="text-emerald-400">{{ activeTab.result.duration_ms }} ms</strong>
+                                </span>
+                                <span v-else>Listo para ejecutar consulta.</span>
+                            </div>
+                        </div>
+
+                        <!-- Interactive Data Grid for query results -->
+                        <div class="flex-1 overflow-auto font-mono text-xs">
+                            <table v-if="activeTab?.result?.rows?.length" class="w-full text-left border-collapse">
+                                <thead class="bg-slate-900 sticky top-0 border-b border-slate-800 text-slate-300">
+                                    <tr>
+                                        <th class="p-2 border-r border-slate-800/60 text-slate-500 w-12 text-center">#</th>
+                                        <th v-for="col in activeTab.result.columns" :key="col" class="p-2 border-r border-slate-800/60 font-semibold">
+                                            {{ col }}
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-for="(row, rIdx) in activeTab.result.rows" :key="rIdx" class="border-b border-slate-900/80 hover:bg-slate-900/50 transition">
+                                        <td class="p-2 border-r border-slate-800/40 text-slate-500 text-center select-none bg-slate-950/40">{{ rIdx + 1 }}</td>
+                                        <td v-for="col in activeTab.result.columns" :key="col" class="p-2 border-r border-slate-800/40 text-slate-200 max-w-xs truncate">
+                                            {{ row[col] === null ? '<NULL>' : row[col] }}
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                            <div v-else class="h-full flex items-center justify-center text-slate-500 text-xs">
+                                No hay resultados para mostrar. Presiona F5 o 'Ejecutar'.
+                            </div>
                         </div>
                     </div>
-                </div>
+                </template>
             </main>
         </div>
     </div>

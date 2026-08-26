@@ -82,7 +82,7 @@ $$\text{Producto} \longrightarrow \text{Requisitos} \longrightarrow \text{Diseñ
 | **#05** | Implementación de Drivers secundarios (**MySQL/MariaDB**, **SQLite** y **SQLCipher Community Edition** con soporte para bases cifradas). | **Completado** |
 | **#06** | Motor de Ejecución de Consultas con Paginación de Cursores y Streaming Server-Sent Events ($O(1)$ RAM). | **Completado** |
 | **#07** | Integración del Frontend (Inertia.js + Vue 3 + Tailwind CSS), Monaco SQL Editor con Autocompletado inteligente y atajos F5 / Ctrl+Enter. | **Completado** |
-| **#08** | Data Grid Interactivo con Edición Inline de registros. | Pendiente |
+| **#08** | Data Grid Interactivo con Edición Inline de registros, inserción modal, borrado seguro y concurrencia por clave primaria. | **Completado** |
 | **#09** | Diseñador Visual de Tablas, Generador de Diagramas ERD y **Visual Query Builder**. | Pendiente |
 | **#10** | Historial de Consultas, Snippets y Registro de Auditoría. | Pendiente |
 | **#11** | Asistente IA con Groq Cloud: Descubrimiento dinámico de modelos (`/models`), recomendación automática, Text-to-SQL, Copilot y optimización. | Pendiente |
@@ -195,3 +195,19 @@ $$\text{Producto} \longrightarrow \text{Requisitos} \longrightarrow \text{Diseñ
   - `composer test` (Pest): 22 tests pasados con 119 aserciones.
   - `npm run build`: Compilación exitosa en 0 errores.
 - **Commit Asociado:** `feat(ui): implement Inertia Vue 3 studio layout and Monaco SQL editor with autocompletion`
+
+### 🔹 Ticket #08: Data Grid Interactivo con Edición Inline de Registros
+- **Fecha:** 2026-08-26
+- **Acciones Realizadas:**
+  1. Creación del componente `InteractiveDataGrid.vue` con soporte para edición en caliente por celda (doble clic), marcado dirty en ámbar, botón de revertir cambios y botón de persistencia atómica por lotes.
+  2. Implementación de modal de inserción con generación de formularios dinámicos a partir de las columnas de la tabla y eliminación segura con comprobación de claves primarias.
+  3. Controlador API `TableDataController.php` con endpoints seguros para paginación (`table/data`), actualización inline (`table/row/update`), inserción (`table/row/insert`) y borrado (`table/row/delete`).
+  4. Protección estricta con excepción `ReadOnlyViolationException` ante cualquier intento de edición en conexiones de sólo lectura.
+  5. Registro automático en `AuditLog` (`DML_UPDATE_INLINE`, `DML_INSERT_ROW`, `DML_DELETE_ROW`) con dirección IP y detalle de los registros modificados.
+  6. Suite de pruebas en Pest (`tests/Feature/TableDataControllerTest.php`) con 4 escenarios de prueba completos.
+- **Resultados de Calidad:**
+  - `composer format` (Pint): 100% aprobado.
+  - `composer analyse` (PHPStan Lvl 8): 0 errores.
+  - `composer test` (Pest): 26 tests pasados con 137 aserciones.
+  - `npm run build`: Compilación exitosa en 0 errores.
+- **Commit Asociado:** `feat(grid): implement InteractiveDataGrid with inline editing, row insertion, deletion and audit logs`
