@@ -26,6 +26,11 @@
 Ciclo de vida obligatorio y secuencial:
 $$\text{Producto} \longrightarrow \text{Requisitos} \longrightarrow \text{Diseño (Arquitectura + Módulos)} \longrightarrow \text{Backlog} \longrightarrow \text{Ticket} \longrightarrow \text{IA (Desarrollo)} \longrightarrow \text{Pruebas} \longrightarrow \text{Revisión} \longrightarrow \text{Git (Gitea + GitHub con Explicación)} \longrightarrow \text{Siguiente Ticket}$$
 
+### 💎 Reglas Obligatorias de Calidad de Código y Redacción:
+1. **🚫 Cero Código Repetitivo (Principio DRY Estricto):** Modularización profunda, reutilización de contratos/traits/servicios y eliminación total de lógica duplicada.
+2. **✍️ Comunicación y Textos Humanizados:** Las explicaciones de cada paso, commits, documentación técnica y mensajes del sistema deben ser naturales, profesionales, técnicos y claros, evitando redacciones robóticas o clichés genéricos de IA.
+3. **✅ Validación Obligatoria por Ticket:** Ningún ticket se da por cerrado sin cumplir simultáneamente: Cero duplicación + Pruebas Pest 100% + PHPStan Nivel 8 + Pint PSR-12 + Explicación humanizada en Git.
+
 ---
 
 ## 🏛️ Definición de Arquitectura y Stack Tecnológico
@@ -69,7 +74,7 @@ $$\text{Producto} \longrightarrow \text{Requisitos} \longrightarrow \text{Diseñ
 | Ticket | Descripción | Estado |
 | :--- | :--- | :---: |
 | **#01** | Inicialización del proyecto Laravel 13, herramientas de calidad (Pest, PHPStan Lvl 8, Pint) y configuración de remotos Git (Gitea principal / GitHub espejo). | **Completado** |
-| **#02** | Migraciones y modelos del DER interno (Users, Roles, Workspaces, Connections, SSH Tunnels, History, Audit). | Pendiente |
+| **#02** | Migraciones y modelos del DER interno (Users, Roles, Workspaces, Connections, SSH Tunnels, History, Audit) con UUIDs y pruebas de integración. | **Completado** |
 | **#03** | Bóveda de conexiones seguras y servicio de cifrado Envelope AES-256-GCM. | Pendiente |
 | **#04** | Contrato `DatabaseDriverContract` e Implementación completa del Driver PostgreSQL. | Pendiente |
 | **#05** | Implementación de Drivers secundarios (MySQL, SQLite y SQLCipher Community Edition con soporte para bases cifradas). | Pendiente |
@@ -98,3 +103,21 @@ $$\text{Producto} \longrightarrow \text{Requisitos} \longrightarrow \text{Diseñ
   - `composer analyse` (PHPStan Lvl 8): 0 errores.
   - `composer test` (Pest): 2 tests pasados exitosamente.
 - **Commit Asociado:** `feat(setup): initialize Laravel 13 project with Pest, PHPStan Level 8, Pint and dual Git remotes`
+
+### 🔹 Ticket #02: Modelos Eloquent y Migraciones del DER Interno con UUIDs
+- **Fecha:** 2026-08-26
+- **Acciones Realizadas:**
+  1. Creación y ejecución de 7 migraciones de base de datos con identificadores UUID como claves primarias y foráneas con eliminación en cascada donde corresponde.
+  2. Implementación de los 10 modelos Eloquent del núcleo del sistema:
+     - `User`: Administrador maestro, control de estados y verificación de permisos.
+     - `Role` y `Permission`: Control de acceso granular basado en roles (RBAC).
+     - `Workspace` y `ConnectionGroup`: Organización de entornos de trabajo y agrupación visual por color.
+     - `Connection`: Soporte multimotor (`pgsql`, `mysql`, `sqlite`, `sqlcipher`, `sqlsrv`) con credenciales y contraseñas cifradas en reposo.
+     - `SshTunnel`: Configuración de túneles SSH bastion con credenciales y llaves privadas encriptadas.
+     - `QueryHistory`, `SavedQuery` y `AuditLog`: Trazabilidad de consultas, snippets con etiquetas y auditoría de acciones sensibles.
+  3. Creación de suite completa de pruebas en Pest (`tests/Feature/InternalDatabaseModelsTest.php`) validando relaciones, persistencia, integridad referencial y comprobación de permisos.
+- **Resultados de Calidad:**
+  - `composer format` (Pint): 100% aprobado.
+  - `composer analyse` (PHPStan Lvl 8): 0 errores.
+  - `composer test` (Pest): 6 tests pasados con 18 aserciones.
+- **Commit Asociado:** `feat(core): implement internal database migrations and Eloquent models with UUIDs and RBAC`
