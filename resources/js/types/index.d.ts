@@ -41,7 +41,7 @@ export interface Connection {
 export interface QueryTab {
     id: string;
     title: string;
-    type: 'sql' | 'table_data' | 'erd' | 'table_designer';
+    type: 'sql' | 'table_data' | 'erd' | 'table_designer' | 'query_builder';
     connectionId: string;
     databaseName: string;
     schemaName?: string;

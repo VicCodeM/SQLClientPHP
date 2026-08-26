@@ -83,7 +83,7 @@ $$\text{Producto} \longrightarrow \text{Requisitos} \longrightarrow \text{Diseñ
 | **#06** | Motor de Ejecución de Consultas con Paginación de Cursores y Streaming Server-Sent Events ($O(1)$ RAM). | **Completado** |
 | **#07** | Integración del Frontend (Inertia.js + Vue 3 + Tailwind CSS), Monaco SQL Editor con Autocompletado inteligente y atajos F5 / Ctrl+Enter. | **Completado** |
 | **#08** | Data Grid Interactivo con Edición Inline de registros, inserción modal, borrado seguro y concurrencia por clave primaria. | **Completado** |
-| **#09** | Diseñador Visual de Tablas, Generador de Diagramas ERD y **Visual Query Builder**. | Pendiente |
+| **#09** | Diseñador Visual de Tablas (DDL en tiempo real), Diagramas ERD y **Visual Query Builder** interactivo. | **Completado** |
 | **#10** | Historial de Consultas, Snippets y Registro de Auditoría. | Pendiente |
 | **#11** | Asistente IA con Groq Cloud: Descubrimiento dinámico de modelos (`/models`), recomendación automática, Text-to-SQL, Copilot y optimización. | Pendiente |
 
@@ -211,3 +211,18 @@ $$\text{Producto} \longrightarrow \text{Requisitos} \longrightarrow \text{Diseñ
   - `composer test` (Pest): 26 tests pasados con 137 aserciones.
   - `npm run build`: Compilación exitosa en 0 errores.
 - **Commit Asociado:** `feat(grid): implement InteractiveDataGrid with inline editing, row insertion, deletion and audit logs`
+
+### 🔹 Ticket #09: Diseñador Visual de Tablas, Diagramas ERD y Visual Query Builder
+- **Fecha:** 2026-08-26
+- **Acciones Realizadas:**
+  1. Implementación de `TableDesigner.vue`: creación gráfica de esquemas de tabla, tipos de datos, constraints PK/FK, valores por defecto y generador de previsualización DDL reactivo.
+  2. Implementación de `ErdDiagramView.vue`: extracción y visualización gráfica del grafo relacional de esquemas (nodos de tabla con atributos e indicadores de clave primaria y aristas de relaciones de clave foránea).
+  3. Implementación de `VisualQueryBuilder.vue`: constructor visual de consultas SQL (selección de campos, JOINs interactivos, filtros WHERE con operadores booleanos AND/OR, ordenamiento y botón de apertura en el editor SQL).
+  4. Controlador API `SchemaDesignController.php` con endpoints `GET /api/v1/connections/{id}/schema/erd` y `POST /api/v1/connections/{id}/table/create`.
+  5. Suite de pruebas en Pest (`tests/Feature/SchemaDesignControllerTest.php`) con 3 tests completos.
+- **Resultados de Calidad:**
+  - `composer format` (Pint): 100% aprobado.
+  - `composer analyse` (PHPStan Lvl 8): 0 errores.
+  - `composer test` (Pest): 29 tests pasados con 151 aserciones.
+  - `npm run build`: Compilación exitosa en 0 errores.
+- **Commit Asociado:** `feat(designer): implement visual TableDesigner, ErdDiagramView and VisualQueryBuilder components`

@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\QueryExecutionController;
+use App\Http\Controllers\Api\SchemaDesignController;
 use App\Http\Controllers\Api\TableDataController;
 use Illuminate\Support\Facades\Route;
 
@@ -22,4 +23,10 @@ Route::prefix('v1')->group(function (): void {
 
     Route::post('connections/{connection}/table/row/delete', [TableDataController::class, 'deleteRow'])
         ->name('api.connections.table.row.delete');
+
+    Route::get('connections/{connection}/schema/erd', [SchemaDesignController::class, 'erd'])
+        ->name('api.connections.schema.erd');
+
+    Route::post('connections/{connection}/table/create', [SchemaDesignController::class, 'createTable'])
+        ->name('api.connections.table.create');
 });

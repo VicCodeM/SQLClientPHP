@@ -3,10 +3,12 @@ import { ref, computed } from 'vue';
 import { Head } from '@inertiajs/vue3';
 import MonacoSqlEditor from '@/Components/Editor/MonacoSqlEditor.vue';
 import InteractiveDataGrid from '@/Components/Grid/InteractiveDataGrid.vue';
-import type { Connection, QueryTab, QueryResult } from '@/types';
+import TableDesigner from '@/Components/Designer/TableDesigner.vue';
+import ErdDiagramView from '@/Components/ERD/ErdDiagramView.vue';
+import VisualQueryBuilder from '@/Components/Builder/VisualQueryBuilder.vue';
+import type { Connection, QueryTab } from '@/types';
 import {
     Play,
-    Copy,
     Plus,
     X,
     Database,
@@ -14,12 +16,14 @@ import {
     Layers,
     Shield,
     Terminal,
-    Sparkles,
     Check,
     FileJson,
     FileSpreadsheet,
     Code,
-    RefreshCw
+    RefreshCw,
+    Network,
+    Sliders,
+    PenTool
 } from 'lucide-vue-next';
 
 const props = defineProps<{
@@ -63,7 +67,7 @@ function showToast(msg: string) {
     }, 2500);
 }
 
-function createNewTab() {
+function createNewTab(sql = 'SELECT * FROM users LIMIT 50;') {
     const newId = `tab-${Date.now()}`;
     tabs.value.push({
         id: newId,
@@ -71,7 +75,7 @@ function createNewTab() {
         type: 'sql',
         connectionId: selectedConnectionId.value,
         databaseName: activeConnection.value?.database_name || 'main',
-        queryText: 'SELECT * FROM users LIMIT 50;',
+        queryText: sql,
         isExecuting: false,
         isDirty: false,
     });
@@ -96,6 +100,57 @@ function openTableDataTab(tableName: string) {
         connectionId: selectedConnectionId.value,
         databaseName: activeConnection.value?.database_name || 'main',
         tableName: tableName,
+        queryText: '',
+        isExecuting: false,
+        isDirty: false,
+    });
+    activeTabId.value = newId;
+}
+
+function openErdTab() {
+    const existing = tabs.value.find((t) => t.type === 'erd' && t.connectionId === selectedConnectionId.value);
+    if (existing) {
+        activeTabId.value = existing.id;
+        return;
+    }
+
+    const newId = `erd-${Date.now()}`;
+    tabs.value.push({
+        id: newId,
+        title: 'Diagrama ERD',
+        type: 'erd',
+        connectionId: selectedConnectionId.value,
+        databaseName: activeConnection.value?.database_name || 'main',
+        queryText: '',
+        isExecuting: false,
+        isDirty: false,
+    });
+    activeTabId.value = newId;
+}
+
+function openTableDesignerTab() {
+    const newId = `designer-${Date.now()}`;
+    tabs.value.push({
+        id: newId,
+        title: 'Diseñador de Tablas',
+        type: 'table_designer',
+        connectionId: selectedConnectionId.value,
+        databaseName: activeConnection.value?.database_name || 'main',
+        queryText: '',
+        isExecuting: false,
+        isDirty: false,
+    });
+    activeTabId.value = newId;
+}
+
+function openQueryBuilderTab() {
+    const newId = `builder-${Date.now()}`;
+    tabs.value.push({
+        id: newId,
+        title: 'Query Builder Visual',
+        type: 'query_builder',
+        connectionId: selectedConnectionId.value,
+        databaseName: activeConnection.value?.database_name || 'main',
         queryText: '',
         isExecuting: false,
         isDirty: false,
@@ -237,6 +292,22 @@ function copyAsInsert() {
 
             <!-- Toolbar Actions -->
             <div class="flex items-center gap-1.5">
+                <!-- Visual Tools Buttons -->
+                <button @click="openErdTab" class="flex items-center gap-1 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold px-2.5 py-1.5 rounded transition">
+                    <Network class="w-3.5 h-3.5 text-blue-400" />
+                    <span>ERD</span>
+                </button>
+                <button @click="openTableDesignerTab" class="flex items-center gap-1 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold px-2.5 py-1.5 rounded transition">
+                    <PenTool class="w-3.5 h-3.5 text-amber-400" />
+                    <span>Diseñar Tabla</span>
+                </button>
+                <button @click="openQueryBuilderTab" class="flex items-center gap-1 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold px-2.5 py-1.5 rounded transition">
+                    <Sliders class="w-3.5 h-3.5 text-emerald-400" />
+                    <span>Query Builder</span>
+                </button>
+
+                <div class="h-4 w-px bg-slate-800 mx-1" />
+
                 <button v-if="activeTab?.type === 'sql'" @click="executeCurrentQuery" :disabled="activeTab?.isExecuting" class="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-xs font-semibold px-3 py-1.5 rounded transition shadow-sm">
                     <Play v-if="!activeTab?.isExecuting" class="w-3.5 h-3.5 fill-current" />
                     <RefreshCw v-else class="w-3.5 h-3.5 animate-spin" />
@@ -312,7 +383,7 @@ function copyAsInsert() {
                 </div>
             </aside>
 
-            <!-- Center Panel: Tabs + Editor/Grid -->
+            <!-- Center Panel: Multi-Tab Workspace -->
             <main class="flex-1 flex flex-col overflow-hidden bg-slate-950">
                 <!-- Tab Header Bar -->
                 <div class="h-9 bg-slate-900/70 border-b border-slate-800 flex items-center px-1 gap-1 overflow-x-auto">
@@ -328,20 +399,50 @@ function copyAsInsert() {
                         ]"
                     >
                         <Terminal v-if="t.type === 'sql'" class="w-3.5 h-3.5" />
-                        <Table v-else class="w-3.5 h-3.5 text-emerald-400" />
+                        <Table v-else-if="t.type === 'table_data'" class="w-3.5 h-3.5 text-emerald-400" />
+                        <Network v-else-if="t.type === 'erd'" class="w-3.5 h-3.5 text-blue-400" />
+                        <PenTool v-else-if="t.type === 'table_designer'" class="w-3.5 h-3.5 text-amber-400" />
+                        <Sliders v-else-if="t.type === 'query_builder'" class="w-3.5 h-3.5 text-emerald-400" />
                         <span>{{ t.title }}</span>
                         <button @click.stop="closeTab(t.id)" class="hover:text-red-400 p-0.5 rounded">
                             <X class="w-3 h-3" />
                         </button>
                     </div>
 
-                    <button @click="createNewTab" class="p-1 text-slate-400 hover:text-white hover:bg-slate-800 rounded transition ml-1" title="Nueva Pestaña">
+                    <button @click="() => createNewTab()" class="p-1 text-slate-400 hover:text-white hover:bg-slate-800 rounded transition ml-1" title="Nueva Pestaña SQL">
                         <Plus class="w-4 h-4" />
                     </button>
                 </div>
 
+                <!-- Tab Body: ERD Mode -->
+                <div v-if="activeTab?.type === 'erd'" class="flex-1 overflow-hidden">
+                    <ErdDiagramView
+                        :connection-id="selectedConnectionId"
+                        @notify="showToast"
+                    />
+                </div>
+
+                <!-- Tab Body: Table Designer Mode -->
+                <div v-else-if="activeTab?.type === 'table_designer'" class="flex-1 overflow-hidden">
+                    <TableDesigner
+                        :connection-id="selectedConnectionId"
+                        :read-only="activeConnection?.is_read_only"
+                        @notify="showToast"
+                        @created="(tbl) => { openTableDataTab(tbl); }"
+                    />
+                </div>
+
+                <!-- Tab Body: Visual Query Builder Mode -->
+                <div v-else-if="activeTab?.type === 'query_builder'" class="flex-1 overflow-hidden">
+                    <VisualQueryBuilder
+                        :connection-id="selectedConnectionId"
+                        @notify="showToast"
+                        @open-in-editor="(sql) => createNewTab(sql)"
+                    />
+                </div>
+
                 <!-- Tab Body: Table Data Grid Mode -->
-                <div v-if="activeTab?.type === 'table_data' && activeTab.tableName" class="flex-1 overflow-hidden">
+                <div v-else-if="activeTab?.type === 'table_data' && activeTab.tableName" class="flex-1 overflow-hidden">
                     <InteractiveDataGrid
                         :connection-id="selectedConnectionId"
                         :table="activeTab.tableName"
@@ -373,7 +474,7 @@ function copyAsInsert() {
                             </div>
                         </div>
 
-                        <!-- Interactive Data Grid for query results -->
+                        <!-- Data Grid for query results -->
                         <div class="flex-1 overflow-auto font-mono text-xs">
                             <table v-if="activeTab?.result?.rows?.length" class="w-full text-left border-collapse">
                                 <thead class="bg-slate-900 sticky top-0 border-b border-slate-800 text-slate-300">
